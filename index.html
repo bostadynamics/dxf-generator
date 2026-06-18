@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to DXF Laser Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for a cleaner look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        #preview-container {
+            background-image: 
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb), 
+                linear-gradient(45deg, #e5e7eb 25%, transparent 25%, transparent 75%, #e5e7eb 75%, #e5e7eb);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen font-sans flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gray-800 border-b border-gray-700 py-4 px-6 flex items-center justify-between shadow-md">
+        <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <h1 class="text-xl font-bold tracking-wide">Image to DXF <span class="text-blue-400">Laser Converter</span></h1>
+        </div>
+        <div class="text-sm text-gray-400 hidden sm:block">
+            100% Client-Side Processing
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Controls Panel (Left) -->
+        <div class="bg-gray-800 border border-gray-700 rounded-xl p-5 flex flex-col gap-6 shadow-lg h-fit">
+            
+            <!-- Step 1: Upload & Crop -->
+            <div class="space-y-3">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                    Upload & Crop
+                </h2>
+                <label for="imageUpload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-600 rounded-lg cursor-pointer bg-gray-700 hover:bg-gray-600 transition-colors">
+                    <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                        <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        <p class="mb-2 text-sm text-gray-300"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                        <p class="text-xs text-gray-400">PNG, JPG, WEBP (Max resolution: 4000x4000)</p>
+                    </div>
+                    <input id="imageUpload" type="file" class="hidden" accept="image/*" />
+                </label>
+
+                <!-- Crop Tools (Hidden until image uploads) -->
+                <div id="cropTools" class="hidden flex gap-2 pt-2">
+                    <button id="startCropBtn" class="flex-1 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm py-2 rounded shadow transition text-white flex justify-center items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                        Crop Image
+                    </button>
+                    <button id="resetCropBtn" class="flex-1 bg-gray-700 hover:bg-gray-600 border border-gray-600 text-sm py-2 rounded shadow transition text-gray-300">
+                        Reset Original
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 2: Settings -->
+            <div class="space-y-4 opacity-50 pointer-events-none transition-opacity duration-300" id="settingsPanel">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                    Adjust Cut Settings
+                </h2>
+                <p class="text-sm text-gray-400">The laser cutline will be drawn precisely where black meets white.</p>
+                
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <label for="threshold" class="text-sm font-medium">Darkness Threshold</label>
+                        <span id="thresholdVal" class="text-sm font-mono bg-gray-900 px-2 rounded text-blue-300">128</span>
+                    </div>
+                    <input id="threshold" type="range" min="1" max="254" value="128" class="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                    <div class="flex justify-between text-xs text-gray-500">
+                        <span>Lighter</span>
+                        <span>Darker</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
+                    <div>
+                        <span class="text-sm font-medium block">Trace Shape Outline</span>
+                        <span class="text-xs text-gray-400">Draws a vector cutline around the edges</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="outlineToggle" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
+                    <div>
+                        <span class="text-sm font-medium block">Invert Colors</span>
+                        <span class="text-xs text-gray-400">Swap what is kept vs removed</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="invertToggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
+                    <div>
+                        <span class="text-sm font-medium block">Vaporize Removed Area</span>
+                        <span class="text-xs text-gray-400">Fills space completely with dense 1-pixel vector paths</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="hatchToggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
+                    <div>
+                        <span class="text-sm font-medium block">Cut Outer Border</span>
+                        <span class="text-xs text-gray-400">Cuts a square frame around the image</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="borderToggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Step 3: Export -->
+            <div class="space-y-3 opacity-50 pointer-events-none transition-opacity duration-300" id="exportPanel">
+                <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                    <span class="bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                    Export
+                </h2>
+                <button id="downloadBtn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Download DXF File
+                </button>
+                <div id="statusText" class="text-center text-sm font-medium text-blue-400 hidden">Processing vectors...</div>
+            </div>
+
+            <!-- Laser Tip -->
+            <div class="mt-auto bg-blue-900/30 border border-blue-800/50 rounded-lg p-4">
+                <h3 class="text-sm font-bold text-blue-300 mb-1 flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    Laser Tip
+                </h3>
+                <p class="text-xs text-blue-200/70 leading-relaxed">
+                    Black shapes represent the material you are keeping. Watch out for "islands" (white areas totally surrounded by black) as they will be cut out entirely!
+                </p>
+            </div>
+
+        </div>
+
+        <!-- Preview Panel (Right) -->
+        <div class="lg:col-span-2 bg-gray-800 border border-gray-700 rounded-xl flex flex-col shadow-lg overflow-hidden h-[600px] lg:h-auto">
+            <div class="bg-gray-900 border-b border-gray-700 px-4 py-3 flex justify-between items-center h-14">
+                <div class="flex items-center gap-3">
+                    <h2 id="previewTitle" class="font-medium text-gray-300 hidden sm:block">Live Preview</h2>
+                    
+                    <!-- Standard View Toggles -->
+                    <div class="flex bg-gray-800 rounded p-1" id="viewModeToggle">
+                        <button id="modeRasterBtn" class="px-3 py-1 text-xs rounded bg-gray-600 text-white shadow transition-colors">Image Map</button>
+                        <button id="modeVectorBtn" class="px-3 py-1 text-xs rounded text-gray-400 hover:text-white transition-colors">DXF Vectors</button>
+                        <button id="modeSimBtn" class="px-3 py-1 text-xs rounded text-gray-400 hover:text-white transition-colors flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Laser Sim
+                        </button>
+                    </div>
+
+                    <!-- Crop Mode Action Banner (Replaces View Toggles while cropping) -->
+                    <div id="cropActionBanner" class="hidden flex gap-2">
+                        <span class="text-sm font-bold text-blue-400 mr-2 flex items-center">Draw box to crop:</span>
+                        <button id="applyCropBtn" class="px-4 py-1 text-xs font-bold rounded bg-blue-600 hover:bg-blue-500 text-white shadow transition-colors">Apply Crop</button>
+                        <button id="cancelCropBtn" class="px-4 py-1 text-xs rounded bg-gray-600 hover:bg-gray-500 text-white shadow transition-colors">Cancel</button>
+                    </div>
+
+                </div>
+                
+                <div class="flex items-center gap-4 text-xs text-gray-400" id="legendContainer">
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-black rounded-sm border border-gray-500"></div> Keep</div>
+                    <div class="flex items-center gap-1"><div class="w-3 h-3 bg-white rounded-sm border border-gray-500"></div> Remove</div>
+                </div>
+            </div>
+            
+            <div id="preview-container" class="flex-1 relative overflow-hidden flex items-center justify-center p-4">
+                <span id="placeholderText" class="text-gray-500 font-medium">Upload an image to see the preview</span>
+                <!-- We use inline styles for max-width/max-height to ensure the canvas size bounds accurately for mouse events -->
+                <canvas id="previewCanvas" class="hidden shadow-2xl border border-gray-400" style="max-width: 100%; max-height: 100%; object-fit: contain;"></canvas>
+                <canvas id="vectorCanvas" class="hidden shadow-2xl border border-gray-400" style="max-width: 100%; max-height: 100%; object-fit: contain;"></canvas>
+                <canvas id="simCanvas" class="hidden shadow-2xl border border-gray-400" style="max-width: 100%; max-height: 100%; object-fit: contain;"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden canvases for internal processing -->
+    <canvas id="hiddenCanvas" class="hidden"></canvas>
+    
+    <script>
+        // DOM Elements
+        const imageUpload = document.getElementById('imageUpload');
+        const thresholdSlider = document.getElementById('threshold');
+        const thresholdVal = document.getElementById('thresholdVal');
+        const outlineToggle = document.getElementById('outlineToggle');
+        const invertToggle = document.getElementById('invertToggle');
+        const hatchToggle = document.getElementById('hatchToggle');
+        const borderToggle = document.getElementById('borderToggle');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const vectorCanvas = document.getElementById('vectorCanvas');
+        const hiddenCanvas = document.getElementById('hiddenCanvas');
+        const placeholderText = document.getElementById('placeholderText');
+        const settingsPanel = document.getElementById('settingsPanel');
+        const exportPanel = document.getElementById('exportPanel');
+        const statusText = document.getElementById('statusText');
+        const modeRasterBtn = document.getElementById('modeRasterBtn');
+        const modeVectorBtn = document.getElementById('modeVectorBtn');
+        const modeSimBtn = document.getElementById('modeSimBtn');
+        const cropTools = document.getElementById('cropTools');
+        
+        // Crop specific DOM elements
+        const startCropBtn = document.getElementById('startCropBtn');
+        const resetCropBtn = document.getElementById('resetCropBtn');
+        const applyCropBtn = document.getElementById('applyCropBtn');
+        const cancelCropBtn = document.getElementById('cancelCropBtn');
+        const viewModeToggle = document.getElementById('viewModeToggle');
+        const cropActionBanner = document.getElementById('cropActionBanner');
+        const previewTitle = document.getElementById('previewTitle');
+        const legendContainer = document.getElementById('legendContainer');
+        
+        const previewCtx = previewCanvas.getContext('2d', { willReadFrequently: true });
+        const vectorCtx = vectorCanvas.getContext('2d');
+        const simCanvas = document.getElementById('simCanvas');
+        const simCtx = simCanvas.getContext('2d');
+        const hiddenCtx = hiddenCanvas.getContext('2d', { willReadFrequently: true });
+
+        // Uncropped Master Backup Canvas
+        const fullImageCanvas = document.createElement('canvas');
+        const fullImageCtx = fullImageCanvas.getContext('2d', { willReadFrequently: true });
+
+        // App State
+        let originalImage = null;
+        let imageWidth = 0;
+        let imageHeight = 0;
+        let binaryGrid = null; 
+        let vectorDebounceTimer = null;
+        let currentDXFLines = null;
+        let currentPaths = []; 
+        let currentViewMode = 'raster';
+        let simAnimationFrame = null;
+        let isSimulating = false;
+        let cachedPreviewData = null; // Caches the pixel-art for fast redraw during cropping
+        
+        // Crop State
+        let isCropping = false;
+        let isDraggingCrop = false;
+        let cropStartX = 0;
+        let cropStartY = 0;
+        let cropRect = {x: 0, y: 0, w: 0, h: 0};
+        
+        // --- Event Listeners ---
+        imageUpload.addEventListener('change', handleImageUpload);
+        thresholdSlider.addEventListener('input', (e) => {
+            thresholdVal.textContent = e.target.value;
+            if (originalImage && !isCropping) processImagePreview();
+        });
+        outlineToggle.addEventListener('change', () => { if (originalImage) updateVectors(); });
+        invertToggle.addEventListener('change', () => { if (originalImage && !isCropping) processImagePreview(); });
+        hatchToggle.addEventListener('change', () => { if (originalImage) updateVectors(); });
+        borderToggle.addEventListener('change', () => { if (originalImage) updateVectors(); });
+        downloadBtn.addEventListener('click', generateAndDownloadDXF);
+
+        modeRasterBtn.addEventListener('click', () => setViewMode('raster'));
+        modeVectorBtn.addEventListener('click', () => setViewMode('vector'));
+        modeSimBtn.addEventListener('click', () => setViewMode('sim'));
+
+        // Crop Event Listeners
+        startCropBtn.addEventListener('click', startCropMode);
+        cancelCropBtn.addEventListener('click', cancelCropMode);
+        applyCropBtn.addEventListener('click', applyCropMode);
+        resetCropBtn.addEventListener('click', resetToOriginalImage);
+
+        // Drag and Drop support
+        const dropZone = imageUpload.parentElement;
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('bg-gray-600', 'border-blue-400');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('bg-gray-600', 'border-blue-400');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('bg-gray-600', 'border-blue-400');
+            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                imageUpload.files = e.dataTransfer.files;
+                handleImageUpload({ target: { files: e.dataTransfer.files } });
+            }
+        });
+
+        // Interactive Cropper Mouse/Touch Events
+        function getEventCoords(e) {
+            const rect = previewCanvas.getBoundingClientRect();
+            // Scale handles the difference between CSS bounding rect and actual canvas resolution
+            const scaleX = previewCanvas.width / rect.width;
+            const scaleY = previewCanvas.height / rect.height;
+            
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            let x = (clientX - rect.left) * scaleX;
+            let y = (clientY - rect.top) * scaleY;
+            
+            // Constrain to canvas bounds
+            x = Math.max(0, Math.min(x, previewCanvas.width));
+            y = Math.max(0, Math.min(y, previewCanvas.height));
+            
+            return { x, y };
+        }
+
+        function handlePointerDown(e) {
+            if (!isCropping) return;
+            isDraggingCrop = true;
+            const coords = getEventCoords(e);
+            cropStartX = coords.x;
+            cropStartY = coords.y;
+            cropRect = { x: cropStartX, y: cropStartY, w: 0, h: 0 };
+            redrawCropOnly();
+        }
+
+        function handlePointerMove(e) {
+            if (!isCropping || !isDraggingCrop) return;
+            e.preventDefault(); // Prevent scrolling on mobile while cropping
+            const coords = getEventCoords(e);
+            cropRect.w = coords.x - cropStartX;
+            cropRect.h = coords.y - cropStartY;
+            redrawCropOnly(); // Fast redraw without re-running threshold logic
+        }
+
+        function handlePointerUp() {
+            if (isDraggingCrop) {
+                isDraggingCrop = false;
+            }
+        }
+
+        previewCanvas.addEventListener('mousedown', handlePointerDown);
+        previewCanvas.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', handlePointerUp);
+        
+        previewCanvas.addEventListener('touchstart', handlePointerDown, {passive: false});
+        previewCanvas.addEventListener('touchmove', handlePointerMove, {passive: false});
+        window.addEventListener('touchend', handlePointerUp);
+
+        // --- Core Image Handling ---
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    originalImage = img;
+                    
+                    // Downscale excessively large images to prevent browser crashing
+                    const MAX_SIZE = 4000;
+                    let w = img.width;
+                    let h = img.height;
+                    
+                    if (w > MAX_SIZE || h > MAX_SIZE) {
+                        const ratio = Math.min(MAX_SIZE / w, MAX_SIZE / h);
+                        w = Math.floor(w * ratio);
+                        h = Math.floor(h * ratio);
+                    }
+
+                    // Save the master uncropped backup
+                    fullImageCanvas.width = w;
+                    fullImageCanvas.height = h;
+                    fullImageCtx.drawImage(img, 0, 0, w, h);
+
+                    resetToOriginalImage(); // Initializes working canvas and starts preview
+                    
+                    // Enable UI Features
+                    cropTools.classList.remove('hidden');
+                    settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+                    exportPanel.classList.remove('opacity-50', 'pointer-events-none');
+                    placeholderText.classList.add('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Restores the working canvas from the master backup
+        function resetToOriginalImage() {
+            if (isCropping) cancelCropMode();
+            
+            imageWidth = fullImageCanvas.width;
+            imageHeight = fullImageCanvas.height;
+
+            hiddenCanvas.width = imageWidth;
+            hiddenCanvas.height = imageHeight;
+            hiddenCtx.drawImage(fullImageCanvas, 0, 0);
+
+            previewCanvas.width = imageWidth;
+            previewCanvas.height = imageHeight;
+
+            setViewMode('raster');
+            processImagePreview();
+        }
+
+        // --- Cropping Flow ---
+
+        function startCropMode() {
+            if (!originalImage) return;
+            isCropping = true;
+            setViewMode('raster');
+            
+            // Swap UI Controls
+            viewModeToggle.classList.add('hidden');
+            previewTitle.classList.add('hidden');
+            legendContainer.classList.add('hidden');
+            cropActionBanner.classList.remove('hidden');
+            settingsPanel.classList.add('opacity-50', 'pointer-events-none'); // Lock settings
+            previewCanvas.classList.add('cursor-crosshair');
+            
+            // Default crop rect wraps the whole image initially
+            cropRect = { x: 0, y: 0, w: imageWidth, h: imageHeight };
+            processImagePreview(); 
+        }
+
+        function cancelCropMode() {
+            isCropping = false;
+            isDraggingCrop = false;
+            
+            // Restore UI Controls
+            viewModeToggle.classList.remove('hidden');
+            previewTitle.classList.remove('hidden');
+            legendContainer.classList.remove('hidden');
+            cropActionBanner.classList.add('hidden');
+            settingsPanel.classList.remove('opacity-50', 'pointer-events-none');
+            previewCanvas.classList.remove('cursor-crosshair');
+            
+            processImagePreview(); // Redraw without the crop overlay
+        }
+
+        function applyCropMode() {
+            if (!isCropping) return;
+            
+            // Normalize rect in case user dragged backwards (negative width/height)
+            const rect = {
+                x: cropRect.w < 0 ? cropRect.x + cropRect.w : cropRect.x,
+                y: cropRect.h < 0 ? cropRect.y + cropRect.h : cropRect.y,
+                w: Math.abs(cropRect.w),
+                h: Math.abs(cropRect.h)
+            };
+
+            // Ignore if crop is microscopically small
+            if (rect.w < 5 || rect.h < 5) {
+                cancelCropMode();
+                return;
+            }
+
+            // Extract the cropped section from the current working canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = rect.w;
+            tempCanvas.height = rect.h;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(hiddenCanvas, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+
+            // Commit the cropped section as the new working image
+            imageWidth = Math.floor(rect.w);
+            imageHeight = Math.floor(rect.h);
+            
+            hiddenCanvas.width = imageWidth;
+            hiddenCanvas.height = imageHeight;
+            hiddenCtx.drawImage(tempCanvas, 0, 0);
+
+            previewCanvas.width = imageWidth;
+            previewCanvas.height = imageHeight;
+
+            cancelCropMode(); // Exits the mode and cleans up UI
+        }
+
+        // Fast redraw function for the crop rectangle without re-running the heavy thresholding logic
+        function redrawCropOnly() {
+            if (!cachedPreviewData) return;
+            
+            // 1. Restore pristine thresholded image
+            previewCtx.putImageData(cachedPreviewData, 0, 0); 
+            
+            // 2. Draw Crop Overlay
+            if (isCropping) {
+                const r = {
+                    x: cropRect.w < 0 ? cropRect.x + cropRect.w : cropRect.x,
+                    y: cropRect.h < 0 ? cropRect.y + cropRect.h : cropRect.y,
+                    w: Math.abs(cropRect.w),
+                    h: Math.abs(cropRect.h)
+                };
+
+                // Draw dimming overlay using 4 rectangles to leave the crop area completely clear
+                previewCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                previewCtx.fillRect(0, 0, imageWidth, r.y); // Top
+                previewCtx.fillRect(0, r.y + r.h, imageWidth, imageHeight - (r.y + r.h)); // Bottom
+                previewCtx.fillRect(0, r.y, r.x, r.h); // Left
+                previewCtx.fillRect(r.x + r.w, r.y, imageWidth - (r.x + r.w), r.h); // Right
+
+                // Draw cutting dashed border
+                previewCtx.strokeStyle = '#3b82f6'; // Blue
+                previewCtx.lineWidth = Math.max(2, imageWidth / 400); // Scale line thickness so it's visible on 4k images
+                previewCtx.setLineDash([10, 10]);
+                previewCtx.strokeRect(r.x, r.y, r.w, r.h);
+                previewCtx.setLineDash([]);
+            }
+        }
+
+        // --- Core Image Processing ---
+
+        // Applies Threshold and draws the Black/White preview to screen
+        function processImagePreview() {
+            if (!originalImage) return;
+
+            const threshold = parseInt(thresholdSlider.value, 10);
+            const invert = invertToggle.checked;
+
+            // Get original pixels
+            const imgData = hiddenCtx.getImageData(0, 0, imageWidth, imageHeight);
+            const data = imgData.data;
+            const len = data.length;
+
+            // Prepare binary grid for the vectorizer (1 = Keep/Black, 0 = Remove/White)
+            binaryGrid = new Uint8Array(imageWidth * imageHeight);
+
+            // Output ImageData for visual preview
+            const previewData = previewCtx.createImageData(imageWidth, imageHeight);
+            const pData = previewData.data;
+
+            let pixelIndex = 0;
+            for (let i = 0; i < len; i += 4) {
+                const r = data[i];
+                const g = data[i+1];
+                const b = data[i+2];
+                const a = data[i+3];
+
+                // Standard grayscale luminosity formula
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b);
+                
+                let isDark = (luminance < threshold) && (a > 128); 
+                if (invert) isDark = !isDark;
+
+                if (isDark) {
+                    pData[i] = 0; pData[i+1] = 0; pData[i+2] = 0; pData[i+3] = 255;
+                    binaryGrid[pixelIndex] = 1;
+                } else {
+                    pData[i] = 255; pData[i+1] = 255; pData[i+2] = 255; pData[i+3] = 255;
+                    binaryGrid[pixelIndex] = 0;
+                }
+                pixelIndex++;
+            }
+
+            previewCtx.putImageData(previewData, 0, 0);
+            cachedPreviewData = previewData; // Save cache for fast crop redrawing
+
+            if (isCropping) {
+                redrawCropOnly();
+            } else {
+                // Debounce the heavy vectorization process (wait 300ms after slider stops)
+                clearTimeout(vectorDebounceTimer);
+                vectorDebounceTimer = setTimeout(updateVectors, 300);
+            }
+        }
+
+        function setViewMode(mode) {
+            if (!originalImage || isCropping) return;
+            currentViewMode = mode;
+            
+            modeRasterBtn.className = "px-3 py-1 text-xs rounded text-gray-400 hover:text-white transition-colors";
+            modeVectorBtn.className = "px-3 py-1 text-xs rounded text-gray-400 hover:text-white transition-colors";
+            modeSimBtn.className = "px-3 py-1 text-xs rounded text-gray-400 hover:text-white transition-colors flex items-center gap-1";
+            
+            previewCanvas.classList.add('hidden');
+            vectorCanvas.classList.add('hidden');
+            simCanvas.classList.add('hidden');
+
+            isSimulating = false;
+            if (simAnimationFrame) cancelAnimationFrame(simAnimationFrame);
+            
+            if (mode === 'raster') {
+                modeRasterBtn.className = "px-3 py-1 text-xs rounded bg-gray-600 text-white shadow transition-colors";
+                previewCanvas.classList.remove('hidden');
+            } else if (mode === 'vector') {
+                modeVectorBtn.className = "px-3 py-1 text-xs rounded bg-gray-600 text-white shadow transition-colors";
+                vectorCanvas.classList.remove('hidden');
+            } else if (mode === 'sim') {
+                modeSimBtn.className = "px-3 py-1 text-xs rounded bg-gray-600 text-white shadow transition-colors flex items-center gap-1";
+                simCanvas.classList.remove('hidden');
+                startSimulation();
+            }
+        }
+
+        // Groups loose segments into paths and draws the exact vector preview
+        function updateVectors() {
+            if (!binaryGrid || isCropping) return;
+            
+            vectorCanvas.width = imageWidth;
+            vectorCanvas.height = imageHeight;
+
+            let paths = [];
+
+            // Generate outline trace if toggled
+            if (outlineToggle.checked) {
+                const lines = extractVectorLines();
+                paths = assemblePaths(lines, imageWidth);
+            }
+            
+            // Generate zig-zag vector hatching if toggled
+            if (hatchToggle.checked) {
+                paths = paths.concat(generateHatchPaths());
+            }
+
+            // Generate bounding box cut if toggled
+            if (borderToggle.checked) {
+                paths.push([
+                    {x: 0, y: 0},
+                    {x: imageWidth - 1, y: 0},
+                    {x: imageWidth - 1, y: imageHeight - 1},
+                    {x: 0, y: imageHeight - 1},
+                    {x: 0, y: 0}
+                ]);
+            }
+
+            currentPaths = paths; // Save globally for the simulator
+            
+            vectorCtx.clearRect(0, 0, imageWidth, imageHeight);
+            vectorCtx.lineCap = "round";
+            vectorCtx.lineJoin = "round";
+            const lineW = Math.max(1.5, imageWidth / 800);
+            vectorCtx.lineWidth = lineW; 
+
+            paths.forEach((path) => {
+                if (path.length === 0) return;
+                
+                vectorCtx.beginPath();
+                vectorCtx.moveTo(path[0].x, path[0].y);
+                for (let i = 1; i < path.length; i++) {
+                    vectorCtx.lineTo(path[i].x, path[i].y);
+                }
+                
+                vectorCtx.strokeStyle = '#00ffff';
+                vectorCtx.stroke();
+
+                vectorCtx.fillStyle = '#ffffff';
+                for (let i = 0; i < path.length; i++) {
+                    vectorCtx.beginPath();
+                    vectorCtx.rect(path[i].x - lineW, path[i].y - lineW, lineW * 2, lineW * 2);
+                    vectorCtx.fill();
+                }
+            });
+            
+            if (currentViewMode === 'sim') {
+                isSimulating = false;
+                if (simAnimationFrame) cancelAnimationFrame(simAnimationFrame);
+                startSimulation();
+            }
+        }
+
+        // --- Vector Generation Algorithms ---
+
+        // Generates optimized continuous zig-zag paths to vaporize empty space
+        function generateHatchPaths() {
+            const paths = [];
+            const w = imageWidth;
+            const h = imageHeight;
+            
+            const step = 1; 
+            let movingRight = true;
+            
+            for (let y = 0; y < h; y += step) {
+                let rowSegments = [];
+                let inSegment = false;
+                let startX = 0;
+                
+                for (let x = 0; x < w; x++) {
+                    if (binaryGrid[y * w + x] === 0) { 
+                        if (!inSegment) { startX = x; inSegment = true; }
+                    } else { 
+                        if (inSegment) { rowSegments.push({ start: startX, end: x - 1 }); inSegment = false; }
+                    }
+                }
+                if (inSegment) { rowSegments.push({ start: startX, end: w - 1 }); }
+                
+                if (rowSegments.length > 0) {
+                    if (movingRight) {
+                        for (let i = 0; i < rowSegments.length; i++) {
+                            if (rowSegments[i].end > rowSegments[i].start) {
+                                paths.push([ {x: rowSegments[i].start, y: y}, {x: rowSegments[i].end, y: y} ]);
+                            }
+                        }
+                    } else {
+                        for (let i = rowSegments.length - 1; i >= 0; i--) {
+                            if (rowSegments[i].end > rowSegments[i].start) {
+                                paths.push([ {x: rowSegments[i].end, y: y}, {x: rowSegments[i].start, y: y} ]);
+                            }
+                        }
+                    }
+                }
+                movingRight = !movingRight;
+            }
+            return paths;
+        }
+
+        function extractVectorLines() {
+            const w = imageWidth;
+            const h = imageHeight;
+            const lines = [];
+
+            const getVal = (x, y) => {
+                if (x < 0 || x >= w || y < 0 || y >= h) return 0;
+                return binaryGrid[y * w + x];
+            };
+
+            for (let y = 0; y <= h; y++) {
+                for (let x = 0; x <= w; x++) {
+                    const TL = getVal(x - 1, y - 1);
+                    const TR = getVal(x, y - 1);
+                    const BL = getVal(x - 1, y);
+                    const BR = getVal(x, y);
+
+                    const state = (TL ? 8 : 0) | (TR ? 4 : 0) | (BR ? 2 : 0) | (BL ? 1 : 0);
+                    if (state === 0 || state === 15) continue;
+
+                    const T = { x: x, y: y - 0.5 };
+                    const R = { x: x + 0.5, y: y };
+                    const B = { x: x, y: y + 0.5 };
+                    const L = { x: x - 0.5, y: y };
+
+                    switch (state) {
+                        case 1: lines.push([L, B]); break;
+                        case 2: lines.push([B, R]); break;
+                        case 3: lines.push([L, R]); break;
+                        case 4: lines.push([R, T]); break;
+                        case 5: lines.push([L, T], [B, R]); break; 
+                        case 6: lines.push([B, T]); break;
+                        case 7: lines.push([L, T]); break;
+                        case 8: lines.push([T, L]); break;
+                        case 9: lines.push([T, B]); break;
+                        case 10: lines.push([T, R], [L, B]); break; 
+                        case 11: lines.push([T, R]); break;
+                        case 12: lines.push([L, R]); break;
+                        case 13: lines.push([B, R]); break;
+                        case 14: lines.push([L, B]); break;
+                    }
+                }
+            }
+            return lines;
+        }
+
+        function assemblePaths(lines, w) {
+            const pointMap = new Map();
+            const W2 = w * 2 + 2; 
+            
+            const getKey = (p) => Math.round(p.x * 2) + Math.round(p.y * 2) * W2;
+
+            for (let i = 0; i < lines.length; i++) {
+                const p1 = lines[i][0];
+                const p2 = lines[i][1];
+                const k1 = getKey(p1);
+                const k2 = getKey(p2);
+
+                if (!pointMap.has(k1)) pointMap.set(k1, []);
+                if (!pointMap.has(k2)) pointMap.set(k2, []);
+
+                pointMap.get(k1).push({ point: p2, key: k2 });
+                pointMap.get(k2).push({ point: p1, key: k1 });
+            }
+
+            const paths = [];
+            const visitedEdges = new Set();
+
+            for (const [startKey, connections] of pointMap.entries()) {
+                for (let i = 0; i < connections.length; i++) {
+                    const conn = connections[i];
+                    
+                    const minK = Math.min(startKey, conn.key);
+                    const maxK = Math.max(startKey, conn.key);
+                    const edgeKey = minK + "-" + maxK;
+
+                    if (visitedEdges.has(edgeKey)) continue;
+
+                    const currentPath = [];
+                    let currentKey = startKey;
+                    let nextKey = conn.key;
+                    
+                    currentPath.push({ x: (currentKey % W2) / 2, y: Math.floor(currentKey / W2) / 2 });
+
+                    while (true) {
+                        const eMin = Math.min(currentKey, nextKey);
+                        const eMax = Math.max(currentKey, nextKey);
+                        visitedEdges.add(eMin + "-" + eMax);
+
+                        currentPath.push({ x: (nextKey % W2) / 2, y: Math.floor(nextKey / W2) / 2 });
+
+                        const nextConnections = pointMap.get(nextKey);
+                        let foundNext = false;
+                        for (let j = 0; j < nextConnections.length; j++) {
+                            const nextConn = nextConnections[j];
+                            const nMin = Math.min(nextKey, nextConn.key);
+                            const nMax = Math.max(nextKey, nextConn.key);
+                            if (!visitedEdges.has(nMin + "-" + nMax)) {
+                                currentKey = nextKey;
+                                nextKey = nextConn.key;
+                                foundNext = true;
+                                break;
+                            }
+                        }
+
+                        if (!foundNext) break;
+                    }
+                    paths.push(simplifyPath(currentPath));
+                }
+            }
+            return paths;
+        }
+
+        function simplifyPath(path) {
+            if (path.length <= 2) return path;
+            const result = [path[0]];
+            for (let i = 1; i < path.length - 1; i++) {
+                const p1 = result[result.length - 1];
+                const p2 = path[i];
+                const p3 = path[i + 1];
+                
+                const crossProduct = (p3.y - p1.y) * (p2.x - p1.x) - (p2.y - p1.y) * (p3.x - p1.x);
+                if (Math.abs(crossProduct) > 0.01) { result.push(p2); }
+            }
+            result.push(path[path.length - 1]);
+            return result;
+        }
+
+        // --- Export DXF ---
+
+        function buildDXF(paths, width, height) {
+            let dxf = [];
+            
+            dxf.push("0", "SECTION");
+            dxf.push("2", "ENTITIES");
+
+            for (let i = 0; i < paths.length; i++) {
+                const path = paths[i];
+                if (path.length < 2) continue;
+
+                const isClosed = (path[0].x === path[path.length-1].x && path[0].y === path[path.length-1].y);
+                const vertices = isClosed ? path.slice(0, -1) : path;
+
+                dxf.push("0", "LWPOLYLINE");
+                dxf.push("100", "AcDbEntity");
+                dxf.push("8", "0"); 
+                dxf.push("100", "AcDbPolyline");
+                dxf.push("90", vertices.length.toString());
+                dxf.push("70", isClosed ? "1" : "0"); 
+
+                for (let j = 0; j < vertices.length; j++) {
+                    const p = vertices[j];
+                    const y = height - p.y; 
+                    dxf.push("10", p.x.toFixed(3));
+                    dxf.push("20", y.toFixed(3));
+                }
+            }
+
+            dxf.push("0", "ENDSEC");
+            dxf.push("0", "EOF");
+            
+            return dxf.join("\n");
+        }
+
+        function generateAndDownloadDXF() {
+            if (!currentPaths || currentPaths.length === 0) {
+                if(!binaryGrid) return;
+                updateVectors();
+            }
+            const dxfString = buildDXF(currentPaths, imageWidth, imageHeight);
+            
+            const blob = new Blob([dxfString], { type: 'application/dxf' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "laser_cutline.dxf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // --- Simulation View ---
+        
+        function startSimulation() {
+            if (!currentPaths || currentPaths.length === 0) return;
+            isSimulating = true;
+            
+            simCanvas.width = imageWidth;
+            simCanvas.height = imageHeight;
+            
+            const burnCanvas = document.createElement('canvas');
+            burnCanvas.width = imageWidth;
+            burnCanvas.height = imageHeight;
+            const burnCtx = burnCanvas.getContext('2d');
+            
+            burnCtx.fillStyle = '#e5d9c5'; 
+            burnCtx.fillRect(0, 0, imageWidth, imageHeight);
+            
+            let pathIdx = 0;
+            let ptIdx = 0;
+            
+            let totalPoints = currentPaths.reduce((sum, p) => sum + p.length, 0);
+            let speed = Math.max(1, Math.floor(totalPoints / 300));
+            if (speed > 100) speed = 100; 
+
+            function drawFrame() {
+                if (!isSimulating) return;
+
+                let pointsDrawn = 0;
+                let travelLine = null;
+                let headPos = null;
+
+                burnCtx.lineWidth = Math.max(1.5, imageWidth / 800);
+                burnCtx.lineCap = 'round';
+                burnCtx.lineJoin = 'round';
+                
+                while(pointsDrawn < speed && pathIdx < currentPaths.length) {
+                    const cp = currentPaths[pathIdx];
+                    
+                    if (!cp || cp.length <= 1) {
+                        pathIdx++; ptIdx = 0; continue;
+                    }
+
+                    if (ptIdx === 0 && pathIdx > 0) {
+                        const lastP = currentPaths[pathIdx-1];
+                        if (lastP && lastP.length > 0) { travelLine = { start: lastP[lastP.length-1], end: cp[0] }; }
+                    }
+
+                    burnCtx.beginPath();
+                    burnCtx.moveTo(cp[ptIdx].x, cp[ptIdx].y);
+                    
+                    let nextIdx = ptIdx + 1;
+                    if (nextIdx < cp.length) {
+                        burnCtx.lineTo(cp[nextIdx].x, cp[nextIdx].y);
+                        burnCtx.strokeStyle = '#3e2723'; 
+                        burnCtx.stroke();
+                        headPos = cp[nextIdx];
+                        ptIdx++;
+                        pointsDrawn++;
+                    } else {
+                        pathIdx++; ptIdx = 0;
+                    }
+                }
+
+                simCtx.clearRect(0, 0, imageWidth, imageHeight);
+                simCtx.drawImage(burnCanvas, 0, 0);
+
+                if (travelLine) {
+                    simCtx.beginPath();
+                    simCtx.moveTo(travelLine.start.x, travelLine.start.y);
+                    simCtx.lineTo(travelLine.end.x, travelLine.end.y);
+                    simCtx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+                    simCtx.lineWidth = burnCtx.lineWidth * 0.5;
+                    simCtx.setLineDash([5, 5]);
+                    simCtx.stroke();
+                    simCtx.setLineDash([]);
+                }
+
+                if (headPos) {
+                    simCtx.beginPath();
+                    simCtx.arc(headPos.x, headPos.y, burnCtx.lineWidth * 4, 0, Math.PI * 2);
+                    simCtx.fillStyle = 'rgba(255, 50, 0, 0.6)';
+                    simCtx.fill();
+                    
+                    simCtx.beginPath();
+                    simCtx.arc(headPos.x, headPos.y, burnCtx.lineWidth * 1.5, 0, Math.PI * 2);
+                    simCtx.fillStyle = '#ffffff';
+                    simCtx.fill();
+                }
+
+                if (pathIdx < currentPaths.length) {
+                    simAnimationFrame = requestAnimationFrame(drawFrame);
+                } else {
+                    setTimeout(() => { if (currentViewMode === 'sim' && isSimulating) { startSimulation(); } }, 2000);
+                }
+            }
+            drawFrame();
+        }
+
+    </script>
+</body>
+</html>
